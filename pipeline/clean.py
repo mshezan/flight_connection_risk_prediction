@@ -1,8 +1,12 @@
 from pathlib import Path
+
 import pandas as pd
 
-RAW_DIR = Path("../data/raw")
-PROCESSED_DIR = Path("../data/processed")
+from config import (
+    RAW_DIR,
+    PROCESSED_DIR,
+)
+
 
 def get_csv_files():
     """
@@ -13,12 +17,43 @@ def get_csv_files():
         RAW_DIR.glob("*.csv")
     )
 
+
+def dataset_summary(files):
+    """
+    Print a summary of available files.
+    """
+
+    print("\nDataset Summary")
+
+    years = {}
+
+    for file in files:
+
+        year = (
+            file.stem
+            .split("_")[0]
+        )
+
+        years[year] = (
+            years.get(year, 0) + 1
+        )
+
+    for year in sorted(years):
+
+        print(
+            f"{year}: "
+            f"{years[year]} files"
+        )
+
+
 def load_file(file_path):
     """
     Load one BTS CSV file.
     """
 
-    df = pd.read_csv(file_path)
+    df = pd.read_csv(
+        file_path
+    )
 
     print(
         f"Loaded {file_path.name}: "
@@ -26,6 +61,7 @@ def load_file(file_path):
     )
 
     return df
+
 
 def convert_types(df):
     """
@@ -39,6 +75,7 @@ def convert_types(df):
 
     return df
 
+
 def remove_invalid_flights(df):
     """
     Remove cancelled and diverted flights.
@@ -46,20 +83,42 @@ def remove_invalid_flights(df):
 
     rows_before = len(df)
 
-    cancelled = (df["CANCELLED"] == 1).sum()
-    diverted = (df["DIVERTED"] == 1).sum()
+    cancelled = (
+        df["CANCELLED"] == 1
+    ).sum()
 
-    df = df[df["CANCELLED"] == 0]
-    df = df[df["DIVERTED"] == 0]
+    diverted = (
+        df["DIVERTED"] == 1
+    ).sum()
+
+    df = df[
+        df["CANCELLED"] == 0
+    ]
+
+    df = df[
+        df["DIVERTED"] == 0
+    ]
 
     rows_after = len(df)
 
-    print(f"Rows before: {rows_before:,}")
-    print(f"Cancelled removed: {cancelled:,}")
-    print(f"Diverted removed: {diverted:,}")
-    print(f"Rows after: {rows_after:,}")
+    print(
+        f"Rows before: {rows_before:,}"
+    )
+
+    print(
+        f"Cancelled removed: {cancelled:,}"
+    )
+
+    print(
+        f"Diverted removed: {diverted:,}"
+    )
+
+    print(
+        f"Rows after: {rows_after:,}"
+    )
 
     return df
+
 
 def handle_missing_values(df):
     """
@@ -70,14 +129,21 @@ def handle_missing_values(df):
         "CARRIER_DELAY",
         "WEATHER_DELAY",
         "NAS_DELAY",
-        "LATE_AIRCRAFT_DELAY"
+        "LATE_AIRCRAFT_DELAY",
     ]
 
     for column in delay_columns:
 
-        missing_count = df[column].isna().sum()
+        missing_count = (
+            df[column]
+            .isna()
+            .sum()
+        )
 
-        df[column] = df[column].fillna(0)
+        df[column] = (
+            df[column]
+            .fillna(0)
+        )
 
         print(
             f"{column}: filled "
@@ -87,17 +153,21 @@ def handle_missing_values(df):
     rows_before = len(df)
 
     df = df.dropna(
-        subset=["ARR_DEL15"]
+        subset=[
+            "ARR_DEL15"
+        ]
     )
 
     rows_after = len(df)
 
     print(
-        f"Dropped {rows_before - rows_after:,} rows "
+        f"Dropped "
+        f"{rows_before - rows_after:,} rows "
         f"with missing ARR_DEL15"
     )
 
     return df
+
 
 def validate_dataframe(df):
     """
@@ -108,17 +178,23 @@ def validate_dataframe(df):
 
     print(
         "Cancelled flights:",
-        (df["CANCELLED"] == 1).sum()
+        (
+            df["CANCELLED"] == 1
+        ).sum()
     )
 
     print(
         "Diverted flights:",
-        (df["DIVERTED"] == 1).sum()
+        (
+            df["DIVERTED"] == 1
+        ).sum()
     )
 
     print(
         "Missing ARR_DEL15:",
-        df["ARR_DEL15"].isna().sum()
+        df["ARR_DEL15"]
+        .isna()
+        .sum()
     )
 
     print(
@@ -128,18 +204,17 @@ def validate_dataframe(df):
 
     return df
 
-def save_clean_file(df, file_path):
+
+def save_clean_file(
+    df,
+    file_path
+):
     """
     Save cleaned dataframe as parquet.
     """
 
     output_name = (
-        "clean_" +
-        file_path.stem.replace(
-            "flights_",
-            ""
-        ) +
-        ".parquet"
+        f"clean_{file_path.stem}.parquet"
     )
 
     output_path = (
@@ -155,7 +230,10 @@ def save_clean_file(df, file_path):
     print(
         f"Saved: {output_path}"
     )
+
+
 def main():
+
     PROCESSED_DIR.mkdir(
         parents=True,
         exist_ok=True
@@ -167,24 +245,43 @@ def main():
         f"Found {len(files)} files"
     )
 
+    dataset_summary(
+        files
+    )
+
     for file_path in files:
 
         print("\n" + "=" * 50)
-        print(file_path.name)
 
-        df = load_file(file_path)
+        print(
+            file_path.name
+        )
 
-        df = convert_types(df)
+        df = load_file(
+            file_path
+        )
 
-        df = remove_invalid_flights(df)
+        df = convert_types(
+            df
+        )
 
-        df = handle_missing_values(df)
+        df = remove_invalid_flights(
+            df
+        )
 
-        df = validate_dataframe(df)
+        df = handle_missing_values(
+            df
+        )
+
+        df = validate_dataframe(
+            df
+        )
 
         save_clean_file(
             df,
             file_path
         )
+
+
 if __name__ == "__main__":
     main()

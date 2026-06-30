@@ -72,37 +72,6 @@ def load_all_data(files):
 
     return df
 
-def split_features_target(df):
-
-    y = df["ARR_DEL15"]
-
-    X = df.drop(
-        columns=[
-            "ARR_DEL15",
-            "FL_DATE"
-        ]
-    )
-
-    print("\nFeature Matrix")
-
-    print(
-        f"Rows: {len(X):,}"
-    )
-
-    print(
-        f"Columns: {len(X.columns)}"
-    )
-
-    print("\nTarget")
-
-    print(
-        y.value_counts(
-            normalize=True
-        )
-    )
-
-    return X, y
-
 def time_split(df):
 
     train_df = df[
@@ -270,29 +239,34 @@ def save_model(model):
         f"\nSaved model: {MODEL_PATH}"
     )
 
-files = get_feature_files()
+def main():
+
+    files = get_feature_files()
+
+    df = load_all_data(files)
+
+    X_train, X_test, y_train, y_test = time_split(df)
+
+    preprocessor = build_preprocessor()
+
+    model = build_model(
+        preprocessor
+    )
+
+    model = train_model(
+        model,
+        X_train,
+        y_train
+    )
+
+    evaluate_model(
+        model,
+        X_test,
+        y_test
+    )
+
+    save_model(model)
 
 
-df = load_all_data(files)
-
-X_train, X_test, y_train, y_test = time_split(df)
-
-preprocessor = build_preprocessor()
-
-model = build_model(
-    preprocessor
-)
-
-model = train_model(
-    model,
-    X_train,
-    y_train
-)
-
-evaluate_model(
-    model,
-    X_test,
-    y_test
-)
-
-save_model(model)
+if __name__ == "__main__":
+    main()

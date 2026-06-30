@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import joblib
 import pandas as pd
 
@@ -7,8 +5,6 @@ from sklearn.metrics import (
     average_precision_score,
     classification_report
 )
-
-BASE_DIR = Path(__file__).resolve().parent.parent
 
 from config import (
     FEATURE_DIR,
@@ -139,16 +135,22 @@ def evaluate_model(
         )
     )
 
-files = get_test_files()
+def main():
 
-model = load_model()
+    files = get_test_files()
 
-X_test, y_test = load_test_data(
-    files
-)
+    model = load_model()
 
-evaluate_model(
-    model,
-    X_test,
-    y_test
-)
+    X_test, y_test = load_test_data(
+        files
+    )
+
+    evaluate_model(
+        model,
+        X_test,
+        y_test
+    )
+
+
+if __name__ == "__main__":
+    main()

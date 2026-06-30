@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Models
+*.joblib
+
+# Logs
+*.log
+
+# Pytest
+.pytest_cache/
+
+# Environment variables
+.env

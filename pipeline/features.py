@@ -114,18 +114,24 @@ def remove_leakage_columns(df):
         "CARRIER_DELAY",
         "WEATHER_DELAY",
         "NAS_DELAY",
-        "LATE_AIRCRAFT_DELAY"
+        "LATE_AIRCRAFT_DELAY",
+    ]
+
+    existing_columns = [
+        column
+        for column in columns_to_drop
+        if column in df.columns
     ]
 
     df = df.drop(
-        columns=columns_to_drop
+        columns=existing_columns
     )
 
     print(
-        f"Removed {len(columns_to_drop)} leakage columns"
+        f"Removed {len(existing_columns)} leakage columns"
     )
 
-    return df
+    return df   
 
 def validate_features(df):
 
@@ -174,13 +180,6 @@ def save_feature_file(
 
     print(
         f"Saved: {output_path}"
-    )
-
-def main():
-
-    OUTPUT_DIR.mkdir(
-        parents=True,
-        exist_ok=True
     )
 
 def compute_delay_rate(history_df,column_name):
@@ -329,7 +328,7 @@ def main():
 
         df = remove_leakage_columns(df)
 
-        validate_features(df)
+        df=validate_features(df)
 
         save_feature_file(
             df,
