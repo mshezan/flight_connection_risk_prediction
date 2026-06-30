@@ -100,6 +100,124 @@ def create_route_feature(df):
 
     return df
 
+def create_interaction_features(df):
+    """
+    Create interaction features.
+    """
+
+    df["CARRIER_ROUTE"] = (
+        df["OP_UNIQUE_CARRIER"]
+        + "_"
+        + df["ROUTE"]
+    )
+
+    df["ORIGIN_HOUR"] = (
+        df["ORIGIN"]
+        + "_"
+        + df["DEP_HOUR"].astype(str)
+    )
+
+    df["DEST_HOUR"] = (
+        df["DEST"]
+        + "_"
+        + df["DEP_HOUR"].astype(str)
+    )
+
+    df["CARRIER_MONTH"] = (
+        df["OP_UNIQUE_CARRIER"]
+        + "_"
+        + df["MONTH"].astype(str)
+    )
+
+    df["ROUTE_MONTH"] = (
+        df["ROUTE"]
+        + "_"
+        + df["MONTH"].astype(str)
+    )
+
+    print("Created:")
+    print("- CARRIER_ROUTE")
+    print("- ORIGIN_HOUR")
+    print("- DEST_HOUR")
+    print("- CARRIER_MONTH")
+    print("- ROUTE_MONTH")
+
+    return df
+
+def create_boolean_features(df):
+    """
+    Create simple boolean features.
+    """
+
+    df["IS_WEEKEND"] = (
+        df["DAY_OF_WEEK"] >= 5
+    ).astype(int)
+
+    df["IS_RED_EYE"] = (
+        (
+            df["DEP_HOUR"] >= 22
+        )
+        |
+        (
+            df["DEP_HOUR"] <= 5
+        )
+    ).astype(int)
+
+    df["IS_PEAK_HOUR"] = (
+        (
+            (df["DEP_HOUR"] >= 6)
+            &
+            (df["DEP_HOUR"] <= 9)
+        )
+        |
+        (
+            (df["DEP_HOUR"] >= 16)
+            &
+            (df["DEP_HOUR"] <= 19)
+        )
+    ).astype(int)
+
+    print("Created:")
+    print("- IS_WEEKEND")
+    print("- IS_RED_EYE")
+    print("- IS_PEAK_HOUR")
+
+    return df
+
+def create_distance_features(df):
+    """
+    Create distance-based features.
+    """
+
+    bins = [
+        0,
+        250,
+        500,
+        1000,
+        2000,
+        float("inf")
+    ]
+
+    labels = [
+        0,
+        1,
+        2,
+        3,
+        4
+    ]
+
+    df["DISTANCE_BUCKET"] = pd.cut(
+        df["DISTANCE"],
+        bins=bins,
+        labels=labels,
+        include_lowest=True
+    ).astype(int)
+
+    print("Created:")
+    print("- DISTANCE_BUCKET")
+
+    return df
+
 def remove_leakage_columns(df):
     """
     Remove columns unavailable before departure.
@@ -153,6 +271,28 @@ def validate_features(df):
         df.columns.tolist()
     )
 
+    print(
+        "\nNew Features:"
+    )
+
+    new_columns = [
+        column
+        for column in df.columns
+        if (
+            "RATE" in column
+            or
+            "COUNT" in column
+            or
+            "BUCKET" in column
+            or
+            column.startswith("IS_")
+        )
+    ]
+
+    for column in sorted(new_columns):
+
+        print(column)
+
     return df
 
 def save_feature_file(
@@ -200,6 +340,23 @@ def compute_delay_rate(history_df,column_name):
 
     return delay_rate
 
+def compute_flight_count(history_df,column_name):
+    flight_count = (
+        history_df
+        .groupby(column_name)
+        .size()
+    )
+
+    print(
+        f"\nComputed {column_name} Flight Counts"
+    )
+
+    print(
+        f"Groups: {len(flight_count):,}"
+    )
+
+    return flight_count
+
 def compute_global_delay_rate(history_df):
 
     global_delay_rate = (
@@ -237,6 +394,71 @@ def add_delay_rate_feature(
 
     return df
 
+def add_count_feature(
+    df,
+    lookup_column,
+    lookup_table,
+    new_column
+):
+
+    df[new_column] = (
+        df[lookup_column]
+        .map(lookup_table)
+        .fillna(0)
+    )
+
+    print(
+        f"\nAdded {new_column}"
+    )
+
+    return df
+
+def create_popularity_features(df):
+    """
+    Create popularity-based features.
+    """
+
+    df["ROUTE_POPULARITY_BUCKET"] = pd.qcut(
+        df["ROUTE_FLIGHT_COUNT"],
+        q=5,
+        labels=False,
+        duplicates="drop"
+    )
+
+    print("Created:")
+    print("- ROUTE_POPULARITY_BUCKET")
+
+    return df
+
+def remove_temporary_columns(df):
+    """
+    Remove temporary columns used only for feature creation.
+    """
+
+    columns = [
+        "CARRIER_ROUTE",
+        "ORIGIN_HOUR",
+        "DEST_HOUR",
+        "CARRIER_MONTH",
+        "ROUTE_MONTH",
+    ]
+
+    existing = [
+        column
+        for column in columns
+        if column in df.columns
+    ]
+
+    df = df.drop(
+        columns=existing
+    )
+
+    print(
+        f"Removed {len(existing)} temporary columns"
+    )
+
+    return df
+
 def get_all_files():
 
     files = sorted(
@@ -266,7 +488,23 @@ def main():
         training_files
     )
 
+    history_df = create_time_features(
+        history_df
+    )
+
     history_df = create_route_feature(
+        history_df
+    )
+
+    history_df = create_boolean_features(
+        history_df
+    )
+
+    history_df = create_distance_features(
+        history_df
+    )
+
+    history_df = create_interaction_features(
         history_df
     )
 
@@ -274,19 +512,89 @@ def main():
         history_df
     )
 
-    route_lookup = compute_delay_rate(
+    route_delay_lookup = compute_delay_rate(
         history_df,
         "ROUTE"
     )
 
-    carrier_lookup = compute_delay_rate(
+    carrier_delay_lookup = compute_delay_rate(
         history_df,
         "OP_UNIQUE_CARRIER"
     )
 
-    origin_lookup = compute_delay_rate(
+    origin_delay_lookup = compute_delay_rate(
         history_df,
         "ORIGIN"
+    )
+
+    dest_delay_lookup = compute_delay_rate(
+    history_df,
+    "DEST"
+    )
+
+    month_delay_lookup = compute_delay_rate(
+        history_df,
+        "MONTH"
+    )
+
+    day_delay_lookup = compute_delay_rate(
+        history_df,
+        "DAY_OF_WEEK"
+    )
+
+    hour_delay_lookup = compute_delay_rate(
+        history_df,
+        "DEP_HOUR"
+    )
+
+    route_count_lookup = compute_flight_count(
+        history_df,
+        "ROUTE"
+    )
+
+    origin_count_lookup = compute_flight_count(
+        history_df,
+        "ORIGIN"
+    )
+
+    dest_count_lookup = compute_flight_count(
+        history_df,
+        "DEST"
+    )
+
+    carrier_count_lookup = compute_flight_count(
+        history_df,
+        "OP_UNIQUE_CARRIER"
+    )
+
+    month_count_lookup = compute_flight_count(
+        history_df,
+        "MONTH"
+    )
+
+    carrier_route_lookup = compute_delay_rate(
+        history_df,
+        "CARRIER_ROUTE"
+    )
+
+    origin_hour_lookup = compute_delay_rate(
+        history_df,
+        "ORIGIN_HOUR"
+    )
+
+    dest_hour_lookup = compute_delay_rate(
+        history_df,
+        "DEST_HOUR"
+    )
+
+    carrier_month_lookup = compute_delay_rate(
+        history_df,
+        "CARRIER_MONTH"
+    )
+
+    route_month_lookup = compute_delay_rate(
+        history_df,
+        "ROUTE_MONTH"
     )
 
     for file_path in all_files:
@@ -302,10 +610,16 @@ def main():
 
         df = create_route_feature(df)
 
+        df =create_boolean_features(df)
+        
+        df = create_distance_features(df)
+
+        df = create_interaction_features(df)
+
         df = add_delay_rate_feature(
             df,
             "ROUTE",
-            route_lookup,
+            route_delay_lookup,
             "ROUTE_DELAY_RATE",
             global_delay_rate
         )
@@ -313,7 +627,7 @@ def main():
         df = add_delay_rate_feature(
             df,
             "OP_UNIQUE_CARRIER",
-            carrier_lookup,
+            carrier_delay_lookup,
             "CARRIER_DELAY_RATE",
             global_delay_rate
         )
@@ -321,10 +635,122 @@ def main():
         df = add_delay_rate_feature(
             df,
             "ORIGIN",
-            origin_lookup,
+            origin_delay_lookup,
             "ORIGIN_DELAY_RATE",
             global_delay_rate
         )
+
+        df = add_delay_rate_feature(
+            df,
+            "DEST",
+            dest_delay_lookup,
+            "DEST_DELAY_RATE",
+            global_delay_rate
+        )
+
+        df = add_delay_rate_feature(
+            df,
+            "MONTH",
+            month_delay_lookup,
+            "MONTH_DELAY_RATE",
+            global_delay_rate
+        )
+
+        df = add_delay_rate_feature(
+            df,
+            "DAY_OF_WEEK",
+            day_delay_lookup,
+            "DAY_OF_WEEK_DELAY_RATE",
+            global_delay_rate
+        )
+
+        df = add_delay_rate_feature(
+            df,
+            "DEP_HOUR",
+            hour_delay_lookup,
+            "DEP_HOUR_DELAY_RATE",
+            global_delay_rate
+        )
+
+        df = add_count_feature(
+            df,
+            "ROUTE",
+            route_count_lookup,
+            "ROUTE_FLIGHT_COUNT"
+        )
+
+        df = add_count_feature(
+            df,
+            "ORIGIN",
+            origin_count_lookup,
+            "ORIGIN_FLIGHT_COUNT"
+        )
+
+        df = add_count_feature(
+            df,
+            "DEST",
+            dest_count_lookup,
+            "DEST_FLIGHT_COUNT"
+        )
+
+        df = add_count_feature(
+            df,
+            "OP_UNIQUE_CARRIER",
+            carrier_count_lookup,
+            "CARRIER_FLIGHT_COUNT"
+        )
+
+        df = add_count_feature(
+            df,
+            "MONTH",
+            month_count_lookup,
+            "MONTH_FLIGHT_COUNT"
+        )
+
+        df = create_popularity_features(
+            df
+        )
+
+        df = add_delay_rate_feature(
+            df,
+            "CARRIER_ROUTE",
+            carrier_route_lookup,
+            "CARRIER_ROUTE_DELAY_RATE",
+            global_delay_rate
+        )
+
+        df = add_delay_rate_feature(
+            df,
+            "ORIGIN_HOUR",
+            origin_hour_lookup,
+            "ORIGIN_HOUR_DELAY_RATE",
+            global_delay_rate
+        )
+
+        df = add_delay_rate_feature(
+            df,
+            "DEST_HOUR",
+            dest_hour_lookup,
+            "DEST_HOUR_DELAY_RATE",
+            global_delay_rate
+        )
+
+        df = add_delay_rate_feature(
+            df,
+            "CARRIER_MONTH",
+            carrier_month_lookup,
+            "CARRIER_MONTH_DELAY_RATE",
+            global_delay_rate
+        )
+
+        df = add_delay_rate_feature(
+            df,
+            "ROUTE_MONTH",
+            route_month_lookup,
+            "ROUTE_MONTH_DELAY_RATE",
+            global_delay_rate
+        )
+        df = remove_temporary_columns(df)
 
         df = remove_leakage_columns(df)
 

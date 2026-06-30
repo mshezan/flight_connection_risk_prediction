@@ -133,7 +133,9 @@ def build_preprocessor():
         "OP_UNIQUE_CARRIER",
         "ORIGIN",
         "DEST",
-        "ROUTE"
+        "ROUTE",
+        "DISTANCE_BUCKET",
+        "ROUTE_POPULARITY_BUCKET",
     ]
 
     preprocessor = ColumnTransformer(
