@@ -92,6 +92,7 @@ def time_split(df):
             "FL_DATE"
         ]
     )
+    print(X_train.columns.tolist())
 
     y_train = train_df[
         "ARR_DEL15"
@@ -103,7 +104,7 @@ def time_split(df):
             "FL_DATE"
         ]
     )
-
+    
     y_test = test_df[
         "ARR_DEL15"
     ]

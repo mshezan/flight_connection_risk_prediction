@@ -233,6 +233,8 @@ def remove_leakage_columns(df):
         "WEATHER_DELAY",
         "NAS_DELAY",
         "LATE_AIRCRAFT_DELAY",
+        "CANCELLED",
+        "DIVERTED",
     ]
 
     existing_columns = [
@@ -459,6 +461,117 @@ def remove_temporary_columns(df):
 
     return df
 
+def compute_route_distance_lookup(
+    history_df
+):
+
+    route_distance = (
+        history_df
+        .groupby("ROUTE")["DISTANCE"]
+        .median()
+    )
+
+    print(
+        "\nComputed Route Distance Lookup"
+    )
+
+    print(
+        f"Routes: {len(route_distance):,}"
+    )
+
+    return route_distance
+
+def compute_route_popularity_lookup(
+    route_count_lookup
+):
+    """
+    Compute popularity bucket for each route.
+    """
+
+    route_counts = (
+        route_count_lookup
+        .reset_index()
+    )
+
+    route_counts.columns = [
+        "ROUTE",
+        "COUNT"
+    ]
+
+    route_counts[
+        "ROUTE_POPULARITY_BUCKET"
+    ] = pd.qcut(
+        route_counts["COUNT"],
+        q=5,
+        labels=False,
+        duplicates="drop"
+    )
+
+    lookup = (
+        route_counts
+        .set_index("ROUTE")[
+            "ROUTE_POPULARITY_BUCKET"
+        ]
+    )
+
+    print(
+        "\nComputed Route Popularity Lookup"
+    )
+
+    print(
+        f"Routes: {len(lookup):,}"
+    )
+
+    return lookup
+
+def compute_airport_id_lookup(
+    history_df,
+    airport_column,
+    airport_id_column
+):
+    """
+    Compute airport code -> airport ID lookup.
+    """
+
+    lookup = (
+        history_df
+        .groupby(airport_column)[airport_id_column]
+        .first()
+    )
+
+    print(
+        f"\nComputed {airport_column} Airport ID Lookup"
+    )
+
+    print(
+        f"Airports: {len(lookup):,}"
+    )
+
+    return lookup
+
+def compute_route_elapsed_lookup(
+    history_df
+):
+    """
+    Compute typical scheduled elapsed time for each route.
+    """
+
+    lookup = (
+        history_df
+        .groupby("ROUTE")["CRS_ELAPSED_TIME"]
+        .median()
+    )
+
+    print(
+        "\nComputed Route Elapsed Lookup"
+    )
+
+    print(
+        f"Routes: {len(lookup):,}"
+    )
+
+    return lookup
+
 def get_all_files():
 
     files = sorted(
@@ -472,6 +585,44 @@ def get_all_files():
     )
 
     return files
+
+import joblib
+
+from pathlib import Path
+
+from config import MODEL_DIR
+
+def save_lookup_table(
+    lookup,
+    filename
+):
+    """
+    Save one lookup table.
+    """
+
+    lookup_dir = (
+        MODEL_DIR /
+        "lookups"
+    )
+
+    lookup_dir.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    output_path = (
+        lookup_dir /
+        filename
+    )
+
+    joblib.dump(
+        lookup,
+        output_path
+    )
+
+    print(
+        f"Saved: {output_path}"
+    )
 
 def main():
 
@@ -552,6 +703,12 @@ def main():
         "ROUTE"
     )
 
+    route_popularity_bucket_lookup = (
+        compute_route_popularity_lookup(
+            route_count_lookup
+        )
+    )
+
     origin_count_lookup = compute_flight_count(
         history_df,
         "ORIGIN"
@@ -572,30 +729,93 @@ def main():
         "MONTH"
     )
 
-    carrier_route_lookup = compute_delay_rate(
+    carrier_route_delay_lookup = compute_delay_rate(
         history_df,
         "CARRIER_ROUTE"
     )
 
-    origin_hour_lookup = compute_delay_rate(
+    origin_hour_delay_lookup = compute_delay_rate(
         history_df,
         "ORIGIN_HOUR"
     )
 
-    dest_hour_lookup = compute_delay_rate(
+    dest_hour_delay_lookup = compute_delay_rate(
         history_df,
         "DEST_HOUR"
     )
 
-    carrier_month_lookup = compute_delay_rate(
+    carrier_month_delay_lookup = compute_delay_rate(
         history_df,
         "CARRIER_MONTH"
     )
 
-    route_month_lookup = compute_delay_rate(
+    route_month_delay_lookup = compute_delay_rate(
         history_df,
         "ROUTE_MONTH"
     )
+
+    route_distance_lookup = compute_route_distance_lookup(
+        history_df
+    )
+
+    origin_airport_id_lookup = compute_airport_id_lookup(
+        history_df,
+        "ORIGIN",
+        "ORIGIN_AIRPORT_ID"
+    )
+
+    dest_airport_id_lookup = compute_airport_id_lookup(
+        history_df,
+        "DEST",
+        "DEST_AIRPORT_ID"
+    )
+
+    route_elapsed_lookup = (
+        compute_route_elapsed_lookup(
+            history_df
+        )
+    )
+
+    route_popularity_bucket_lookup = (
+        compute_route_popularity_lookup(
+            route_count_lookup
+        )
+    )
+
+    lookup_tables = {
+        "route_delay_lookup.joblib": route_delay_lookup,
+        "origin_delay_lookup.joblib": origin_delay_lookup,
+        "dest_delay_lookup.joblib": dest_delay_lookup,
+        "carrier_delay_lookup.joblib": carrier_delay_lookup,
+        "month_delay_lookup.joblib": month_delay_lookup,
+        "day_delay_lookup.joblib": day_delay_lookup,
+        "hour_delay_lookup.joblib": hour_delay_lookup,
+
+        "route_count_lookup.joblib": route_count_lookup,
+        "route_popularity_bucket_lookup.joblib": route_popularity_bucket_lookup,
+        "origin_count_lookup.joblib": origin_count_lookup,
+        "dest_count_lookup.joblib": dest_count_lookup,
+        "carrier_count_lookup.joblib": carrier_count_lookup,
+        "month_count_lookup.joblib": month_count_lookup,
+
+        "carrier_route_delay_lookup.joblib": carrier_route_delay_lookup,
+        "origin_hour_delay_lookup.joblib": origin_hour_delay_lookup,
+        "dest_hour_delay_lookup.joblib": dest_hour_delay_lookup,
+        "carrier_month_delay_lookup.joblib": carrier_month_delay_lookup,
+        "route_month_delay_lookup.joblib": route_month_delay_lookup,
+        "route_distance_lookup.joblib": route_distance_lookup,
+        "global_delay_rate.joblib": global_delay_rate,
+        "origin_airport_id_lookup.joblib":origin_airport_id_lookup,
+        "dest_airport_id_lookup.joblib":dest_airport_id_lookup,
+        "route_elapsed_lookup.joblib":route_elapsed_lookup,
+        "route_popularity_bucket_lookup.joblib":route_popularity_bucket_lookup,
+    }
+
+    for filename, lookup in lookup_tables.items():
+        save_lookup_table(
+            lookup,
+            filename
+        )
 
     for file_path in all_files:
 
@@ -714,7 +934,7 @@ def main():
         df = add_delay_rate_feature(
             df,
             "CARRIER_ROUTE",
-            carrier_route_lookup,
+            carrier_route_delay_lookup,
             "CARRIER_ROUTE_DELAY_RATE",
             global_delay_rate
         )
@@ -722,7 +942,7 @@ def main():
         df = add_delay_rate_feature(
             df,
             "ORIGIN_HOUR",
-            origin_hour_lookup,
+            origin_hour_delay_lookup,
             "ORIGIN_HOUR_DELAY_RATE",
             global_delay_rate
         )
@@ -730,7 +950,7 @@ def main():
         df = add_delay_rate_feature(
             df,
             "DEST_HOUR",
-            dest_hour_lookup,
+            dest_hour_delay_lookup,
             "DEST_HOUR_DELAY_RATE",
             global_delay_rate
         )
@@ -738,7 +958,7 @@ def main():
         df = add_delay_rate_feature(
             df,
             "CARRIER_MONTH",
-            carrier_month_lookup,
+            carrier_month_delay_lookup,
             "CARRIER_MONTH_DELAY_RATE",
             global_delay_rate
         )
@@ -746,7 +966,7 @@ def main():
         df = add_delay_rate_feature(
             df,
             "ROUTE_MONTH",
-            route_month_lookup,
+            route_month_delay_lookup,
             "ROUTE_MONTH_DELAY_RATE",
             global_delay_rate
         )
