@@ -8,6 +8,7 @@ RAW_DIR = BASE_DIR / "data" / "raw"
 PROCESSED_DIR = BASE_DIR / "data" / "processed"
 FEATURE_DIR = BASE_DIR / "data" / f"features_v{PIPELINE_VERSION}"
 MODEL_DIR = BASE_DIR / "model"
+LOOKUP_DIR = MODEL_DIR / "lookups"
 
 MODEL_PATH = MODEL_DIR / f"pipeline_v{PIPELINE_VERSION}.joblib"
 
