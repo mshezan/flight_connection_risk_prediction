@@ -1,0 +1,77 @@
+[
+    {
+        "code": "9E",
+        "name": "Endeavor Air",
+        "display": "Endeavor Air (9E)"
+    },
+    {
+        "code": "AA",
+        "name": "American Airlines",
+        "display": "American Airlines (AA)"
+    },
+    {
+        "code": "AS",
+        "name": "Alaska Airlines",
+        "display": "Alaska Airlines (AS)"
+    },
+    {
+        "code": "B6",
+        "name": "JetBlue Airways",
+        "display": "JetBlue Airways (B6)"
+    },
+    {
+        "code": "DL",
+        "name": "Delta Air Lines",
+        "display": "Delta Air Lines (DL)"
+    },
+    {
+        "code": "F9",
+        "name": "Frontier Airlines",
+        "display": "Frontier Airlines (F9)"
+    },
+    {
+        "code": "G4",
+        "name": "Allegiant Air",
+        "display": "Allegiant Air (G4)"
+    },
+    {
+        "code": "HA",
+        "name": "Hawaiian Airlines",
+        "display": "Hawaiian Airlines (HA)"
+    },
+    {
+        "code": "MQ",
+        "name": "Envoy Air",
+        "display": "Envoy Air (MQ)"
+    },
+    {
+        "code": "NK",
+        "name": "Spirit Airlines",
+        "display": "Spirit Airlines (NK)"
+    },
+    {
+        "code": "OH",
+        "name": "PSA Airlines",
+        "display": "PSA Airlines (OH)"
+    },
+    {
+        "code": "OO",
+        "name": "SkyWest Airlines",
+        "display": "SkyWest Airlines (OO)"
+    },
+    {
+        "code": "UA",
+        "name": "United Airlines",
+        "display": "United Airlines (UA)"
+    },
+    {
+        "code": "WN",
+        "name": "Southwest Airlines",
+        "display": "Southwest Airlines (WN)"
+    },
+    {
+        "code": "YX",
+        "name": "Republic Airways",
+        "display": "Republic Airways (YX)"
+    }
+]
